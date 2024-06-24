@@ -37,7 +37,8 @@ class Context private (
   def push(item: VAny): Unit = stack += item
 
   /** The last n items on the stack, in reverse order e.g. Popping 3 of
-    * [1,2,3,4] results in [4,3,2]
+    * [1,2,3,4] results in [4,3,2] TODO repeat inputs when not enough items on
+    * stack
     */
   def pop(n: Int): List[VAny] = List.fill(n)(stack.remove(stack.size - 1))
 
@@ -64,7 +65,7 @@ class Context private (
   ): VAny =
     if (vars.contains(varName)) {
       this.vars(varName) match {
-        case null => parent.get.getVar(varName, default)
+        case null  => parent.get.getVar(varName, default)
         case value => value
       }
     } else {
@@ -133,6 +134,14 @@ object Context {
       inputs = inputs,
       settings = settings
     )
+  
+  def fromFlags(flags: List[String])(using Backend): Context = {
+    Context(
+      settings = Settings(
+        implicitOutput = !flags.contains("O")
+      )
+    )
+  }
 
   /** Helper to grab stack from implicit Context */
   def stack(using ctx: Context) = ctx.stack
@@ -146,7 +155,7 @@ object Context {
     */
   def fnCallCtx(fnCtx: Context, currCtx: Context): Context =
     new Context(
-      stack = currCtx.stack,
+      stack = mut.ArrayBuffer(),
       contextVar = fnCtx.contextVar,
       vars = mut.Map(fnCtx.vars.toSeq*),
       inputs = fnCtx.inputs,

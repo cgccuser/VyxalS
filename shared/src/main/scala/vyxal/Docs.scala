@@ -10,6 +10,7 @@ case class ElementDocs(
 )
 
 object Docs {
+
   /** Documentation for every element */
   val elements: Map[String, ElementDocs] = Map(
     "+" -> ElementDocs(
@@ -17,7 +18,7 @@ object Docs {
       desc = "Adds the top two items on the stack",
       arity = 2,
       overloads = Map(
-        "num-num" -> "Add two integers",
+        "num-num" -> "Add two integers"
       ),
       vectorises = true
     ),

@@ -48,7 +48,8 @@ class VList(val lst: Seq[VAny]) extends Seq[VAny], SeqOps[VAny, Seq, VList] {
 
   override protected def fromSpecific(coll: IterableOnce[VAny]): VList =
     VList.fromSpecific(coll)
-  override protected def newSpecificBuilder: collection.mutable.Builder[VAny, VList] =
+  override protected def newSpecificBuilder
+      : collection.mutable.Builder[VAny, VList] =
     VList.newBuilder
   override def empty: VList = VList.empty
 }
@@ -78,7 +79,9 @@ object VList extends SpecificIterableFactory[VAny, VList] {
   def empty: VList = new VList(Seq.empty)
 
   def newBuilder: mutable.Builder[VAny, VList] =
-    mutable.ArrayBuffer.newBuilder[VAny].mapResult(elems => new VList(elems.toSeq))
+    mutable.ArrayBuffer
+      .newBuilder[VAny]
+      .mapResult(elems => new VList(elems.toSeq))
 
   def fromSpecific(it: IterableOnce[VAny]): VList = new VList(it.iterator.toSeq)
 }

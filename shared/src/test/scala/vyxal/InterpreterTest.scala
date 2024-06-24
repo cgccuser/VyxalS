@@ -7,7 +7,7 @@ class InterpreterTest extends AnyFunSpec {
 
   inline def runTest(code: String, expected: VAny) =
     it("should return the right result for " + code) {
-      val ctx = Interpreter.execute(code)
+      val ctx = Interpreter.execute(code, flags=List("O"))
       assert(ctx.pop() == expected)
     }
   
@@ -40,6 +40,12 @@ class InterpreterTest extends AnyFunSpec {
     runTest("5 1 7 2 4 2+¢æ W", VList(7, 3, 9, 4, 6))
 
     // TODO: currently modifiers that take a lambda don't work
+  }
+
+  describe("lambda") {
+    runTest("2 λ1 + 3} †", 3)
+    // Ensure only one value gets returned from the lambda
+    runTest("2 λ1 + 4} † W", VList(4))
   }
 
   // TODO: auto-generate some of these tests from the YAML

@@ -8,8 +8,11 @@ import spire.math.Number
   *   variable.
   * @param numToList
   *   The function used to convert numbers to lists
+  * @param implicitOutput
+  *   Whether the last element on the stack is printed when the program ends
   */
 case class Settings(
     defaultValue: VAny = 0.vnum,
-    numToList: VNum => VList = n => Helpers.range(0.vnum, n)
+    numToList: VNum => VList = n => Helpers.range(0.vnum, n),
+    implicitOutput: Boolean = true
 )

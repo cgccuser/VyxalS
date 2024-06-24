@@ -1,51 +1,70 @@
 package vyxal
 
+import org.w3c.dom.Text
+
 /** An AST representing Vyxal code
   */
 sealed trait AST {
-
-  /** Back into Vyxal code */
-  def toVyxal: String
+  def textRange: TextRange
 }
 
-case class Literal(value: VAny) extends AST {
-  override def toVyxal = value.toString
+/** Represents the position of a character */
+case class Pos(row: Int, col: Int) {
+  override def toString = s"$row:$col"
 }
 
-case class Element(symbol: String) extends AST {
-  override def toVyxal = symbol
+/** Represents the space a chunk of text occupies */
+case class TextRange(start: Pos, end: Pos) {
+  override def toString = s"$start to $end"
 }
+
+object TextRange {
+
+  /** For nodes that were created programmatically, not parsed */
+  def synthetic = TextRange(Pos(0, 0), Pos(0, 0))
+}
+
+case class Literal(value: VAny, textRange: TextRange) extends AST
+
+case class Element(symbol: String, textRange: TextRange) extends AST
 
 /** Groups multiple elements together
   */
-case class Cmds(cmds: AST*) extends AST {
-  override def toVyxal = cmds.map(_.toVyxal).mkString(" ")
+case class Cmds private(cmds: AST*) extends AST {
+  override def textRange =
+    if (cmds.isEmpty) TextRange.synthetic
+    else TextRange(cmds.head.textRange.start, cmds.last.textRange.end)
+  
+  override def equals(other: Any) = other match {
+    case Cmds(otherCmds*) => cmds.sameElements(otherCmds)
+    case _ => false
+  }
 }
 
 object Cmds {
-  def empty = Cmds()
+  def apply(cmds: AST*) = new Cmds(cmds.toList*)
+}
+
+object Empty extends AST {
+  def textRange = TextRange.synthetic
 }
 
 /** Represents variable access (←varName)
   */
-case class VarGet(name: String) extends AST {
-  override def toVyxal = s"←$name"
-}
+case class VarGet(name: String, textRange: TextRange) extends AST
 
 /** Represents variable assignment (→varName)
   */
-case class VarSet(name: String) extends AST {
-  override def toVyxal = s"→$name"
-}
+case class VarSet(name: String, textRange: TextRange) extends AST
 
 /** Execute the top of the stack (or just run element †) */
-case class ExecFn() extends AST {
-  override def toVyxal = "†"
-}
+case class ExecFn(textRange: TextRange) extends AST
 
-case class If(truthy: AST, falsey: AST) extends AST {
-  override def toVyxal = s"[${truthy.toVyxal}|${falsey.toVyxal}}"
-}
+case class If(
+    truthy: AST,
+    falsey: Option[AST],
+    textRange: TextRange
+) extends AST
 
 /** A for loop
   * @param loopVar
@@ -53,55 +72,40 @@ case class If(truthy: AST, falsey: AST) extends AST {
   * @param body
   *   The body of the loop
   */
-case class For(loopVar: Option[String], body: AST) extends AST {
-  override def toVyxal = "(" + loopVar.fold("")(_ + "|") + body.toVyxal + "}"
-}
+case class For(
+    loopVar: Option[String],
+    body: AST,
+    textRange: TextRange
+) extends AST
 
 /** @param cond
   *   The code to run to test each time
   * @param body
   *   The code to run if the condition is true
   */
-case class While(cond: Option[AST], body: AST) extends AST {
-  override def toVyxal =
-    "{" + cond.fold("")(_.toVyxal + "|") + body.toVyxal + "}"
-}
+case class While(
+    cond: Option[AST],
+    body: AST,
+    textRange: TextRange
+) extends AST
 
 case class FnDef(
     name: String,
     arityOrParams: List[Int | String],
-    body: AST
+    body: AST,
+    textRange: TextRange
 ) extends AST {
   def arity: Int = arityOrParams match {
     case List(arity: Int) => arity
-    case ps => 1.max(ps.count(_.isInstanceOf[String]))
+    case ps               => 1.max(ps.count(_.isInstanceOf[String]))
   }
-
-  override def toVyxal =
-    arityOrParams
-      .map(_.toString)
-      .mkString(s"@$name:", ":", s"|${body.toVyxal}}")
 }
 
-case class Modified(
-    onExec: () => Context ?=> Unit,
-    modName: String,
-    elems: Seq[AST],
-    arity: Int
-) extends AST {
-  override def toVyxal = elems.map(_.toVyxal).mkString("") + modName
-}
-
-case class Lambda(body: AST, kind: LambdaKind) extends AST {
-  override def toVyxal =
-    kind match {
-      case LambdaKind.Normal => "λ" + body.toVyxal + "}"
-      case LambdaKind.OneElement => body.toVyxal + "¤"
-      case LambdaKind.TwoElement => body.toVyxal + "¢"
-      case LambdaKind.ThreeElement => body.toVyxal + "€"
-      case LambdaKind.FourElement => body.toVyxal + "§"
-    }
-}
+case class Lambda(
+    body: AST,
+    kind: LambdaKind = LambdaKind.Normal,
+    textRange: TextRange
+) extends AST
 
 enum LambdaKind {
   case Normal, OneElement, TwoElement, ThreeElement, FourElement
@@ -109,6 +113,17 @@ enum LambdaKind {
 
 /** A lambda after which an element runs (map, filter, and sort lambdas)
   */
-case class LambdaWithOp(lam: Lambda, after: AST) extends AST {
-  override def toVyxal = lam.toVyxal + after.toVyxal
+case class LambdaWithOp(
+    lam: Lambda,
+    after: AST
+) extends AST {
+  override def textRange = lam.textRange
+}
+
+enum Modifier(symbol: String) extends AST {
+  case ConditionalExecute(body: AST, textRange: TextRange) extends Modifier("¿")
+  case ApplyToEachStackItem(
+      body: AST,
+      textRange: TextRange
+  ) extends Modifier("æ")
 }

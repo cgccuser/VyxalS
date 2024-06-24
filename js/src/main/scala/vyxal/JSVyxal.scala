@@ -10,9 +10,9 @@ import org.scalajs.dom.{document, window}
   */
 @JSExportTopLevel("Vyxal")
 object JSVyxal {
-  /**
-   * A dictionary containing docs for all the elements
-   */
+
+  /** A dictionary containing docs for all the elements
+    */
   @JSExport
   val elements: js.Dictionary[JSElementDocs] =
     Docs.elements.view
@@ -59,9 +59,8 @@ object JSVyxal {
     )
   }
 
-  /**
-   * A JS-friendly version of `ElementDocs`
-   */
+  /** A JS-friendly version of `ElementDocs`
+    */
   class JSElementDocs(
       val name: String,
       val desc: String,
